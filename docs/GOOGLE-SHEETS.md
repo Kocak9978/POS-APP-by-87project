@@ -53,6 +53,21 @@ Buka aplikasi → **Pengaturan → Google Sheets — Laporan Keuangan**:
 
 Selesai. Setiap pembayaran & pencatatan pengeluaran otomatis terkirim.
 
+### ✅ Cara memastikan endpoint sudah benar
+
+Buka **URL `/exec` itu langsung di browser**. Seharusnya muncul JSON seperti ini:
+
+```json
+{ "ok": true, "app": "My Cash-POS APP", "status": "aktif — endpoint siap menerima data",
+  "kunciSudahDiatur": true, "tabTersedia": ["Transaksi","Penjualan","Pengeluaran"] }
+```
+
+Kalau `kunciSudahDiatur` bernilai `false`, berarti `KUNCI_RAHASIA` di script masih
+placeholder — ganti, lalu **Deploy ulang**.
+
+> Kalau yang muncul di browser adalah `Script function not found: doGet`, berarti
+> kode belum tersimpan atau nama episodenya berubah. Pastikan tetap `doGet`/`doPost`.
+
 ---
 
 ## Data yang dikirim
@@ -137,8 +152,13 @@ Tombol lain di Pengaturan:
 | Masalah | Penyebab & Solusi |
 |---|---|
 | **"Belum dikonfigurasi"** | URL atau Kunci Rahasia kosong. Isi keduanya lalu **Simpan**. |
-| **Koneksi gagal: Failed to fetch** | URL salah (pastikan berakhiran `/exec`, bukan `/dev`), atau tidak ada internet. |
-| **`Kunci rahasia salah`** | Kunci di app ≠ `KUNCI_RAHASIA` di `gs-laporan.gs`. Samakan. |
+| **URL berakhiran `/dev`** | Itu hanya untuk pemilik script. Salin URL `/exec` dari **Deploy**. |
+| **"Koneksi diblokir browser"** / `Failed to fetch` | 3 hal yang perlu dicek: (1) URL harus `/exec`, (2) di Deploy, *Who has access* = **Anyone** (bukan *Anyone with Google account*), (3) ada internet. |
+| **`Kunci rahasia salah`** | Kunci di app ≠ `KUNCI_RAHASIA` di `gs-laporan.gs`. Samakan, lalu **Deploy ulang**. |
+| **`KUNCI_RAHASIA ... masih placeholder`** | Baris `KUNCI_RAHASIA` di script belum diganti. Ganti lalu Deploy ulang. |
+| **HTTP 401 / 403 / Sign in** | Deployment hanya boleh untuk akun Google. Edit deployment → *Who has access: Anyone* → Deploy ulang. |
+| **`Script function not found`** | Nama fungsi di script berubah / belum disimpan. Pastikan kode tetap `doPost` lalu Deploy ulang. |
+| **`Out of quota` / 403 quota** | Kuota Apps Script harian habis. Tunggu reset, atau kurangi pengiriman dengan memakai **Kirim Ulang Semua** satu kali. |
 | **Tidak ada baris masuk** | Pastikan tab tidak disembunyikan; cek juga status **Kirim Tertunda** di Pengaturan. |
 | **Mau pindah ke sheet lain** | Buat spreadsheet baru, ulangi langkah 2–5, lalu tekan **Kirim Ulang Semua**. |
 | **Kolom angka jadi teks** | Pilih kolom → menu **Data → Pisahkan teks ke angka** (`Data → Split text to columns`). |

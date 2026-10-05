@@ -51,16 +51,44 @@ KOLOM_KUNCI[TAB_TRANSAKSI] = ['ID_Transaksi'];
 KOLOM_KUNCI[TAB_PENJUALAN] = ['ID_Transaksi', 'ID_Produk'];
 KOLOM_KUNCI[TAB_PENGELUARAN] = ['ID_Pengeluaran'];
 
+/** Buka URL ini di browser untuk memastikan endpoint sudah aktif.
+ *  Kalau muncul JSON di bawah ini, berarti script sudah ter-deploy dengan benar. */
 function doGet(e) {
-  return jsonOut({ ok: true, message: 'My Cash-POS APP — endpoint aktif. Gunakan POST dari aplikasi.' });
+  var info = {
+    ok: true,
+    app: 'My Cash-POS APP',
+    status: 'aktif — endpoint siap menerima data',
+    kunciSudahDiatur: KUNCI_RAHASIA !== 'GANTI-DENGAN-KUNCI-ANDA',
+    tabTersedia: [TAB_TRANSAKSI, TAB_PENJUALAN, TAB_PENGELUARAN],
+    caraPakai: 'Kirim POST berisi JSON {secret, tab, key, row} dari aplikasi kasir.'
+  };
+  if (!info.kunciSudahDiatur) {
+    info.peringatan = 'KUNCI_RAHASIA masih placeholder — ganti di script lalu Deploy ulang, lalu samakan dengan aplikasi.';
+  }
+  return jsonOut(info);
 }
 
 function doPost(e) {
   try {
-    var payload = JSON.parse((e && e.postData && e.postData.contents) || '{}');
+    var isi = (e && e.postData && e.postData.contents) || '';
+
+    // Diagnosa: kalau body tidak sampai (mis. diblokir browser / deploy salah)
+    if (!isi || !isi.trim()) {
+      return jsonOut({ ok: false, error: 'Payload kosong diterima. Body POST tidak sampai — pastikan URL deployment berakhiran /exec dan aplikasi memakai Content-Type text/plain.' });
+    }
+
+    var payload;
+    try {
+      payload = JSON.parse(isi);
+    } catch (pe) {
+      return jsonOut({ ok: false, error: 'Payload bukan JSON yang valid: ' + isi.slice(0, 100) });
+    }
 
     // 1) validasi kunci rahasia
-    if (KUNCI_RAHASIA === 'GANTI-DENGAN-KUNCI-ANDA' || payload.secret !== KUNCI_RAHASIA) {
+    if (KUNCI_RAHASIA === 'GANTI-DENGAN-KUNCI-ANDA') {
+      return jsonOut({ ok: false, error: 'KUNCI_RAHASIA di script masih placeholder. Ganti dengan kunci Anda lalu Deploy ulang.' });
+    }
+    if (payload.secret !== KUNCI_RAHASIA) {
       return jsonOut({ ok: false, error: 'Kunci rahasia salah. Samakan dengan KUNCI_RAHASIA di script ini.' });
     }
 

@@ -193,15 +193,17 @@ const Settings = {
     st.textContent = I18n.t('sheet.testing');
     st.className = 'muted';
     try {
-      const r = await Sheet.test();
-      st.textContent = (r && r.skipped)
-        ? I18n.t('sheet.testOk')
-        : I18n.t('sheet.testOk');
+      await Sheet.test();
+      st.textContent = I18n.t('sheet.testOk');
       st.className = 'muted success';
       this.renderSheetState();
     } catch (e) {
-      st.textContent = I18n.t('sheet.testFail').replace('{err}', e.message || String(e));
+      // tampilkan petunjuk yang bisa ditindaklanjuti, bukan error teknis mentah
+      const problem = Sheet.urlProblem();
+      st.innerHTML = '<b>' + UI.esc(I18n.t('sheet.testFail').replace('{err}', e.message || String(e))) + '</b><br>' +
+        UI.esc(problem || Sheet.hintFor(e));
       st.className = 'muted error';
+      console.warn('[SHEET] uji koneksi gagal:', e);
     }
   },
 
@@ -214,7 +216,7 @@ const Settings = {
     st.className = 'muted';
     const r = await Sheet.flush();
     if (r.error) {
-      st.textContent = I18n.t('sheet.sendFail').replace('{err}', r.error);
+      st.textContent = I18n.t('sheet.sendFail').replace('{err}', r.error) + ' — ' + Sheet.hintFor(new Error(r.error));
       st.className = 'muted error';
     } else {
       UI.toast(I18n.t('sheet.sent').replace('{n}', r.sent), 'success');

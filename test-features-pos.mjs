@@ -156,14 +156,24 @@ const steps = `
 
     // dikonfigurasi → transaksi dipecah jadi tab Transaksi + Penjualan, otomatis terkirim
     const posted = [];
+    const sentHeaders = [];
     window.fetch = async (url, opts) => {
       posted.push(JSON.parse(opts.body));
-      return { ok: true, json: async () => ({ ok: true, added: 1 }) };
+      sentHeaders.push((opts.headers || {})['Content-Type'] || '');
+      return { ok: true, text: async () => JSON.stringify({ ok: true, added: 1 }) };
     };
     Sheet.saveMeta({ url: 'https://script.google.com/macros/s/AKfy-test/exec',
                      secret: 'kunci-rahasia', lastAt: 0, lastOk: false, lastError: '' });
     ok(Sheet.configured() === true, '14) URL + kunci terisi → Sheets terkonfigurasi');
 
+    // Content-Type WAJIB simple (text/plain): application/json memicu CORS
+    // preflight yang tidak dijawab Apps Script -> "Failed to fetch".
+    posted.length = 0; sentHeaders.length = 0;
+    await Sheet.test();
+    ok(sentHeaders.length === 1 && /^text\\/plain/i.test(sentHeaders[0]),
+      '14b) kirim sebagai text/plain (hindari CORS preflight ke Apps Script)');
+
+    posted.length = 0; sentHeaders.length = 0;
     Sheet.pushTransaction(trx);
     await new Promise(r => setTimeout(r, 200));
     const trxRows = posted.filter(p => p.tab === 'Transaksi');
@@ -196,7 +206,7 @@ const steps = `
     posted.length = 0;
     window.fetch = async (url, opts) => {
       posted.push(JSON.parse(opts.body));
-      return { ok: true, json: async () => ({ ok: true }) };
+      return { ok: true, text: async () => JSON.stringify({ ok: true }) };
     };
     await Sheet.flush();
     ok(Sheet.pending() === 0 && posted.length === 1, '21) internet kembali → antrean otomatis terkirim');
@@ -221,6 +231,20 @@ const steps = `
     const dupItem = posted.filter(p => p.tab === 'Penjualan').length;
     ok(dupTrx === 1 && dupItem === trx.items.length,
       '23) transaksi sama 2x -> TIDAK terkirim dobel (race condition tertangani)');
+
+    // diagnosa: pesan error teknis diterjemahkan jadi petunjuk yang bisa ditindaklanjuti
+    Sheet.saveMeta({ url: 'https://script.google.com/macros/s/AKfy-test/dev',
+                     secret: 'kunci-rahasia', lastAt: 0, lastOk: false, lastError: '' });
+    ok(/\\/dev/.test(Sheet.urlProblem()), '24) URL /dev terdeteksi & diberi tahu');
+    Sheet.saveMeta({ url: 'https://script.google.com/macros/s/AKfy-test/exec',
+                     secret: 'kunci-rahasia', lastAt: 0, lastOk: false, lastError: '' });
+    ok(Sheet.urlProblem() === '', '25) URL /exec yang benar -> tanpa pesan problem');
+    ok(Sheet.hintFor(new Error('Failed to fetch')).indexOf('Anyone') > -1,
+      '26) error "Failed to fetch" -> petunjuk mengecek hak akses Anyone');
+    ok(Sheet.hintFor(new Error('Kunci rahasia salah.')).indexOf('KUNCI_RAHASIA') > -1 ||
+       Sheet.hintFor(new Error('Kunci rahasia salah.')).indexOf('secret') > -1 ||
+       Sheet.hintFor(new Error('Kunci rahasia salah.')).indexOf('kunci') > -1,
+      '27) error kunci salah -> petunjuk menyamakan KUNCI_RAHASIA');
 
     DB.set('sheetQueue', []);
     DB.set('sheet', { url: '', secret: '', lastAt: 0, lastOk: false, lastError: '' });

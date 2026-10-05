@@ -60,15 +60,23 @@ const Sheet = (() => {
     const ctrl = new AbortController();
     const timer = setTimeout(() => ctrl.abort(), TIMEOUT_MS);
     try {
+      /* PENTING: pakai 'text/plain' BUKAN 'application/json'.
+         Header application/json membuat browser mengirim CORS preflight (OPTIONS)
+         lebih dulu, dan endpoint Apps Script tidak menjawab preflight -> request
+         diblokir & muncul sebagai "Failed to fetch". Dengan text/plain ini
+         menjadi "simple request" (tanpa preflight) dan body JSON tetap terbaca
+         Apps Script lewat e.postData.contents. */
       const res = await fetch(endpoint(), {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
         body: JSON.stringify({ secret: m.secret, tab: entry.tab, key: entry.key, row: entry.row }),
         signal: ctrl.signal
       });
-      const data = await res.json().catch(() => ({}));
+      const teks = await res.text();
+      let data = {};
+      try { data = JSON.parse(teks); } catch (_) { /*_balasan bukan JSON*/ }
       if (!res.ok || !data || data.ok !== true) {
-        throw new Error((data && data.error) || ('HTTP ' + res.status));
+        throw new Error((data && data.error) || ('HTTP ' + res.status + (teks ? ' — ' + teks.slice(0, 120) : '')));
       }
       return data;
     } finally {
@@ -198,8 +206,34 @@ const Sheet = (() => {
     return r;
   }
 
+  /* ---------------- diagnosa bantuan ---------------- */
+
+  /* Cek bentuk URL sebelum mencoba koneksi, supaya pesan error lebih tepat. */
+  function urlProblem() {
+    const u = endpoint();
+    if (!u) return I18n.t('sheet.hintNoUrl');
+    if (u.indexOf('script.google.com') < 0 && u.indexOf('script.googleusercontent.com') < 0) {
+      return I18n.t('sheet.hintBadHost');
+    }
+    if (/\/dev(\?|$)/.test(u)) return I18n.t('sheet.hintDevUrl');
+    if (!/\/exec(\?|$)/.test(u)) return I18n.t('sheet.hintNotExec');
+    return '';
+  }
+
+  /* Terjemahkan error teknis menjadi petunjuk yang bisa ditindaklanjuti. */
+  function hintFor(err) {
+    const m = String((err && err.message) || err || '');
+    if (/Failed to fetch|NetworkError|Load failed|ERR_/i.test(m)) return I18n.t('sheet.hintFetch');
+    if (/abort|timeout|Timeout/i.test(m)) return I18n.t('sheet.hintTimeout');
+    if (/401|403|Unauthorized|Sign in/i.test(m)) return I18n.t('sheet.hintAuth');
+    if (/404|Not Found/i.test(m)) return I18n.t('sheet.hint404');
+    if (/KUNCI_RAHASIA|kunci rahasia|GANTI-DENGAN/i.test(m)) return I18n.t('sheet.hintSecret');
+    if (/Spreadsheet|script\/storage|Document/i.test(m)) return I18n.t('sheet.hintScript');
+    return I18n.t('sheet.hintUnknown');
+  }
+
   return {
     configured, meta, saveMeta, endpoint, queue, pending, flush, enqueue,
-    pushTransaction, pushExpense, rebuildAll, test, HEADERS
+    pushTransaction, pushExpense, rebuildAll, test, urlProblem, hintFor, HEADERS
   };
 })();
