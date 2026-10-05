@@ -84,6 +84,16 @@ const Settings = {
       document.getElementById('btn-sync-disconnect').onclick = () => this.disconnectSync();
       this.renderSyncState();
     }
+
+    // ---- Google Sheets (laporan keuangan) ----
+    const sheetCard = document.getElementById('sheet-card');
+    if (sheetCard && !sheetCard.classList.contains('hidden')) {
+      document.getElementById('btn-sheet-save').onclick = () => this.saveSheet();
+      document.getElementById('btn-sheet-test').onclick = () => this.testSheet();
+      document.getElementById('btn-sheet-flush').onclick = () => this.flushSheet();
+      document.getElementById('btn-sheet-resend').onclick = () => this.resendSheet();
+      this.renderSheetState();
+    }
   },
 
   /* ---------- Bluetooth ---------- */
@@ -139,6 +149,83 @@ const Settings = {
     } catch (e) {
       st.textContent = I18n.t('bt.fail').replace('{err}', e.message); st.className = 'muted error';
     }
+  },
+
+  /* ---------- Google Sheets (laporan keuangan) ---------- */
+  renderSheetState() {
+    const st = document.getElementById('sheet-state');
+    const badge = document.getElementById('sheet-pending-badge');
+    if (!st) return;
+    const m = Sheet.meta();
+    const left = Sheet.pending();
+    if (badge) badge.textContent = left ? '(' + left + ')' : '';
+
+    if (!Sheet.configured()) {
+      st.textContent = I18n.t('sheet.notConfigured');
+      st.className = 'muted';
+      return;
+    }
+    let txt = I18n.t('sheet.ready');
+    if (m.lastAt) {
+      const t = UI.fmtDateTime(new Date(m.lastAt).toISOString());
+      txt += ' — ' + I18n.t('sheet.lastSend') + ': ' + t + (m.lastOk ? '' : ' ⚠️');
+    }
+    st.textContent = txt;
+    st.className = 'muted' + (m.lastOk === false ? ' error' : '');
+  },
+
+  saveSheet() {
+    const url = document.getElementById('sheet-url').value.trim();
+    const secret = document.getElementById('sheet-secret').value.trim();
+    const m = Sheet.meta();
+    if (url) m.url = url;
+    if (secret) m.secret = secret;
+    if (!m.url || !m.secret) { UI.toast(I18n.t('common.required'), 'error'); return; }
+    Sheet.saveMeta(m);
+    UI.toast(I18n.t('common.saved'), 'success');
+    this.renderSheetState();
+  },
+
+  async testSheet() {
+    const st = document.getElementById('sheet-state');
+    this.saveSheet();
+    if (!Sheet.configured()) return;
+    st.textContent = I18n.t('sheet.testing');
+    st.className = 'muted';
+    try {
+      const r = await Sheet.test();
+      st.textContent = (r && r.skipped)
+        ? I18n.t('sheet.testOk')
+        : I18n.t('sheet.testOk');
+      st.className = 'muted success';
+      this.renderSheetState();
+    } catch (e) {
+      st.textContent = I18n.t('sheet.testFail').replace('{err}', e.message || String(e));
+      st.className = 'muted error';
+    }
+  },
+
+  async flushSheet() {
+    const st = document.getElementById('sheet-state');
+    if (!Sheet.configured()) { UI.toast(I18n.t('sheet.notConfigured'), 'error'); return; }
+    const left = Sheet.pending();
+    if (!left) { UI.toast(I18n.t('sheet.nothing'), 'info'); return; }
+    st.textContent = I18n.t('sheet.sending').replace('{n}', left);
+    st.className = 'muted';
+    const r = await Sheet.flush();
+    if (r.error) {
+      st.textContent = I18n.t('sheet.sendFail').replace('{err}', r.error);
+      st.className = 'muted error';
+    } else {
+      UI.toast(I18n.t('sheet.sent').replace('{n}', r.sent), 'success');
+      this.renderSheetState();
+    }
+  },
+
+  resendSheet() {
+    const n = Sheet.rebuildAll();
+    UI.toast(I18n.t('sheet.queued').replace('{n}', n), 'success');
+    this.renderSheetState();
   },
 
   /* ---------- Sync ---------- */

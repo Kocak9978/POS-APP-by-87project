@@ -344,6 +344,10 @@ const Cashier = {
       Receipt.print(trx);
     };
     form.querySelector('#btn-new-trx').onclick = () => UI.closeModal();
+    // kirim laporan keuangan ke Google Sheets (otomatis tiap pembayaran)
+    if (!trx.training) {
+      Sheet.pushTransaction(trx);
+    }
     // cetak otomatis ke printer thermal 58mm saat payment berhasil
     // (pakai jalur SPP langsung, SAMA seperti Tes Cetak di Settings)
     setTimeout(() => {

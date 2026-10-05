@@ -21,7 +21,7 @@ window.document.getElementById = function (id) {
   return el;
 };
 
-const appFiles = ['js/db.js', 'js/i18n.js', 'js/auth.js', 'js/ui.js', 'js/products.js', 'js/cashier.js'];
+const appFiles = ['js/db.js', 'js/i18n.js', 'js/auth.js', 'js/ui.js', 'js/products.js', 'js/sheet.js', 'js/cashier.js'];
 const appSrc = appFiles.map(p).join('\n;\n');
 
 const steps = `

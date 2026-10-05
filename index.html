@@ -16,7 +16,7 @@
     </div>
     <h1 data-i18n="app.title">My Cash-POS APP</h1>
     <p class="login-sub" data-i18n="login.subtitle">Aplikasi kasir untuk toko Anda</p>
-    <p class="login-sub" style="margin-top:-6px;font-size:12px;color:#94a3b8;font-weight:600">v1.2.2 · 7 metode bayar · Training Mode · Retur · Pengeluaran</p>
+    <p class="login-sub" style="margin-top:-6px;font-size:12px;color:#94a3b8;font-weight:600">v1.2.3 · 7 metode bayar · Training Mode · Retur · Pengeluaran</p>
     <form id="login-form" autocomplete="off">
       <label class="field">
         <span data-i18n="login.username">Nama pengguna</span>
@@ -354,6 +354,43 @@
             </button>
           </div>
           <p class="muted" id="sync-state" style="margin-top:8px"></p>
+        </div>
+
+        <!-- ===== GOOGLE SHEETS (LAPORAN KEUANGAN) ===== -->
+        <div class="card" id="sheet-card">
+          <div class="card-head">
+            <h3 class="card-title">📊 <span data-i18n="sheet.title">Google Sheets — Laporan Keuangan</span></h3>
+          </div>
+          <p class="muted" data-i18n="sheet.hint" style="font-size:12px;line-height:1.5;margin-bottom:10px">
+            Otomatis mengirim transaksi &amp; pengeluaran ke spreadsheet. Laporan laba rugi, penjualan per produk, dan chart bisa dibuat di Google Sheets.
+          </p>
+          <div class="field">
+            <span data-i18n="sheet.url">Apps Script Web App URL</span>
+            <input id="sheet-url" class="input" placeholder="https://script.google.com/macros/s/AKfy.../exec" autocomplete="off">
+          </div>
+          <div class="field">
+            <span data-i18n="sheet.secret">Kunci Rahasia</span>
+            <input id="sheet-secret" class="input" type="password" placeholder="••••••••" autocomplete="off">
+          </div>
+          <div class="row gap" style="margin-top:10px">
+            <button class="btn btn-primary" id="btn-sheet-save" style="flex:1">
+              <span data-i18n="sheet.save">Simpan</span>
+            </button>
+            <button class="btn btn-secondary" id="btn-sheet-test">
+              <span data-i18n="sheet.test">Uji Koneksi</span>
+            </button>
+          </div>
+          <div class="row gap" style="margin-top:10px">
+            <button class="btn btn-ghost btn-block" id="btn-sheet-flush" style="flex:1;width:auto">
+              <span data-i18n="sheet.flush">Kirim Tertunda</span> <span id="sheet-pending-badge" class="muted"></span>
+            </button>
+            <button class="btn btn-ghost btn-block" id="btn-sheet-resend" style="flex:1;width:auto">
+              <span data-i18n="sheet.resend">Kirim Ulang Semua</span>
+            </button>
+          </div>
+          <p class="muted" id="sheet-state" style="margin-top:8px"></p>
+        </div>
+
         <div class="card" id="training-card">
           <div class="card-head">
             <h3 class="card-title">🅿️ <span data-i18n="train.title">Mode Pelatihan</span></h3>
@@ -412,6 +449,7 @@
 <script src="js/auth.js"></script>
 <script src="js/receipt.js"></script>
 <script src="js/products.js"></script>
+<script src="js/sheet.js"></script>
 <script src="js/cashier.js"></script>
 <script src="js/history.js"></script>
 <script src="js/dashboard.js"></script>

@@ -23,7 +23,7 @@ window.document.getElementById = function (id) {
 };
 
 /* 3) urutan script = urutan <script> di index.html */
-const order = ['i18n', 'db', 'ui', 'auth', 'receipt', 'products', 'cashier', 'history', 'dashboard', 'reports', 'bluetooth', 'sync', 'settings', 'app'];
+const order = ['i18n', 'db', 'ui', 'auth', 'receipt', 'products', 'sheet', 'cashier', 'history', 'dashboard', 'reports', 'bluetooth', 'sync', 'settings', 'app'];
 const appSource = order.map(f => read('www/js/' + f + '.js')).join('\n;\n');
 
 const steps = `

@@ -23,7 +23,7 @@ window.document.getElementById = function (id) {
   return el;
 };
 
-const order = ['i18n', 'db', 'ui', 'auth', 'receipt', 'products', 'cashier', 'history', 'dashboard', 'reports', 'bluetooth', 'sync', 'settings', 'app'];
+const order = ['i18n', 'db', 'ui', 'auth', 'receipt', 'products', 'sheet', 'cashier', 'history', 'dashboard', 'reports', 'bluetooth', 'sync', 'settings', 'app'];
 const appSource = order.map(f => read('www/js/' + f + '.js')).join('\n;\n');
 
 const steps = `
@@ -146,6 +146,84 @@ const steps = `
       '12) printer BT terpasang → struk via SPP langsung, TIDAK lewat dialog HTML');
     const s = DB.settings(); s.bluetoothPrinter = printerBackup || null; DB.saveSettings(s);
     delete window.Capacitor;
+
+    /* ===== (5) GOOGLE SHEETS: laporan keuangan otomatis ===== */
+    // belum dikonfigurasi → transaksi TIDAK ikut diantre, app tetap normal
+    DB.set('sheet', { url: '', secret: '', lastAt: 0, lastOk: false, lastError: '' });
+    DB.set('sheetQueue', []);
+    Sheet.pushTransaction(trx);
+    ok(Sheet.pending() === 0, '13) tanpa konfigurasi Sheets → tidak ada antrean (tidak mengganggu kasir)');
+
+    // dikonfigurasi → transaksi dipecah jadi tab Transaksi + Penjualan, otomatis terkirim
+    const posted = [];
+    window.fetch = async (url, opts) => {
+      posted.push(JSON.parse(opts.body));
+      return { ok: true, json: async () => ({ ok: true, added: 1 }) };
+    };
+    Sheet.saveMeta({ url: 'https://script.google.com/macros/s/AKfy-test/exec',
+                     secret: 'kunci-rahasia', lastAt: 0, lastOk: false, lastError: '' });
+    ok(Sheet.configured() === true, '14) URL + kunci terisi → Sheets terkonfigurasi');
+
+    Sheet.pushTransaction(trx);
+    await new Promise(r => setTimeout(r, 200));
+    const trxRows = posted.filter(p => p.tab === 'Transaksi');
+    const itemRows = posted.filter(p => p.tab === 'Penjualan');
+    ok(trxRows.length === 1 && trxRows[0].row[0] === trx.id && trxRows[0].row[10] === trx.total,
+      '15) transaksi → 1 baris tab Transaksi, kolom Total benar');
+    ok(itemRows.length === trx.items.length &&
+       itemRows.every(r => r.row[0] === trx.id) &&
+       itemRows.every(r => r.row[7] > 0),
+      '16) tiap item → baris tab Penjualan (produk terlaris bisa dipivot)');
+    ok(posted.every(p => p.secret === 'kunci-rahasia'), '17) kunci rahasia ikut terkirim (endpoint terproteksi)');
+    ok(Sheet.pending() === 0, '18) antrean kosong setelah terkirim (offline-safe)');
+
+    // pengeluaran → tab Pengeluaran
+    posted.length = 0;
+    Sheet.pushExpense({ id: 'EXP-X1', date: new Date().toISOString(), note: 'Beli bahan', amount: 75000, user: 'admin' });
+    await new Promise(r => setTimeout(r, 200));
+    const expRows = posted.filter(p => p.tab === 'Pengeluaran');
+    ok(expRows.length === 1 && expRows[0].row[3] === 'Beli bahan' && expRows[0].row[4] === 75000,
+      '19) pengeluaran → tab Pengeluaran (bikin laporan laba rugi)');
+
+    // offline → data aman di antrean, tidak hilang
+    posted.length = 0;
+    window.fetch = async () => { throw new Error('Network down'); };
+    Sheet.pushExpense({ id: 'EXP-X2', date: new Date().toISOString(), note: 'Listrik', amount: 50000, user: 'admin' });
+    await new Promise(r => setTimeout(r, 200));
+    ok(Sheet.pending() === 1, '20) offline → data mengantre di lokal, tidak hilang');
+
+    // internet kembali → antrean terkirim
+    posted.length = 0;
+    window.fetch = async (url, opts) => {
+      posted.push(JSON.parse(opts.body));
+      return { ok: true, json: async () => ({ ok: true }) };
+    };
+    await Sheet.flush();
+    ok(Sheet.pending() === 0 && posted.length === 1, '21) internet kembali → antrean otomatis terkirim');
+
+    // kirim ulang semua → aman, duplikat dicek di sisi spreadsheet
+    posted.length = 0;
+    const dbTrxs = DB.get('transactions', []);
+    const dbExps = DB.get('expenses', []);
+    const expectRows = dbTrxs.reduce((n, t) => n + 1 + ((t.items && t.items.length) || 0), 0) + dbExps.length;
+    const nQueued = Sheet.rebuildAll();
+    await new Promise(r => setTimeout(r, 700));
+    ok(nQueued === expectRows && posted.length === expectRows && Sheet.pending() === 0,
+      '22) "Kirim Ulang Semua" mengirim ulang seluruh riwayat (' + expectRows + ' baris) tanpa sisa antrean');
+
+    // anti dobel-kirim: push transaksi sama 2x -> hanya 1 baris per tab terkirim
+    posted.length = 0;
+    DB.set('sheetQueue', []);
+    Sheet.pushTransaction(trx);
+    Sheet.pushTransaction(trx);
+    await new Promise(r => setTimeout(r, 400));
+    const dupTrx = posted.filter(p => p.tab === 'Transaksi').length;
+    const dupItem = posted.filter(p => p.tab === 'Penjualan').length;
+    ok(dupTrx === 1 && dupItem === trx.items.length,
+      '23) transaksi sama 2x -> TIDAK terkirim dobel (race condition tertangani)');
+
+    DB.set('sheetQueue', []);
+    DB.set('sheet', { url: '', secret: '', lastAt: 0, lastOk: false, lastError: '' });
 
     window.__ts = R;
   })();

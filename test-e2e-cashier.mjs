@@ -9,7 +9,7 @@ const ROOT = '/workspaces/BOT';
 const read = f => readFileSync(ROOT + '/' + f, 'utf8');
 
 /* 1) gabung SEMUA file app (urutan = urutan <script> index.html) */
-const appFiles = [ 'js/db.js', 'js/i18n.js', 'js/auth.js', 'js/ui.js', 'js/products.js', 'js/cashier.js' ];
+const appFiles = [ 'js/db.js', 'js/i18n.js', 'js/auth.js', 'js/ui.js', 'js/products.js', 'js/sheet.js', 'js/cashier.js' ];
 const appSource = appFiles.map(read).join('\n;\n');
 
 /* 2) langkah uji — ini dijalankan DI DALAM scope yang sama (eval berantai satu global) */

@@ -17,10 +17,10 @@ echo "── 3/4 gradle build ──"
 
 echo "── 4/4 salin hasil ke dist/ ──"
 mkdir -p dist
-cp android/app/build/outputs/apk/debug/app-debug.apk    dist/KasirPro-v1.2.2.apk
-cp android/app/build/outputs/apk/release/app-release.apk dist/KasirPro-v1.2.2-release.apk
+cp android/app/build/outputs/apk/debug/app-debug.apk    dist/KasirPro-v1.2.3.apk
+cp android/app/build/outputs/apk/release/app-release.apk dist/KasirPro-v1.2.3-release.apk
 
 echo ""
 echo "✅ Selesai! APK:"
-echo "   dist/KasirPro-v1.2.2.apk"
-echo "   dist/KasirPro-v1.2.2-release.apk"
+echo "   dist/KasirPro-v1.2.3.apk"
+echo "   dist/KasirPro-v1.2.3-release.apk"

@@ -93,14 +93,17 @@ const Reports = {
     }
     const me = Auth.current();
     const list = this.expenses();
-    list.unshift({
+    const exp = {
       id: 'EXP-' + Date.now().toString(36).toUpperCase(),
       date: new Date().toISOString(),
       note,
       amount,
       user: me ? (me.name || me.username) : '—'
-    });
+    };
+    list.unshift(exp);
     this.saveExpenses(list);
+    // kirim pengeluaran ke Google Sheets
+    Sheet.pushExpense(exp);
     document.getElementById('exp-note').value = '';
     document.getElementById('exp-amount').value = '';
     this.render();
