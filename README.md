@@ -43,6 +43,7 @@ python3 -m http.server 8080
 - 📈 **Laporan shift** — laporan per-kasir per-shift, detail transaksi per shift (owner: semua shift, admin: shift sendiri)
 - 🖨️ **Cetak struk** — struk terformat untuk printer termal 58mm
 - 📡 **Cetak Bluetooth ESC/POS** — cetak langsung ke printer termal via Bluetooth (Android)
+- 📊 **Laporan keuangan ke Google Sheets** — transaksi & pengeluaran otomatis terkirim ke spreadsheet (tab *Transaksi*, *Penjualan*, *Pengeluaran*), siap pivot & chart
 - 🔄 **Sinkronisasi data** — sinkronisasi multi-perangkat via server Node.js + SQLite
 
 ## 🖨️ Struk untuk Printer Termal 58mm
@@ -80,6 +81,23 @@ Fitur sinkronisasi memungkinkan dua perangkat (mis. dua kasir) berbagi data via 
 
 > Server menyimpan data di `server/kasirpro.db`. Login ke server terpisah dari login lokal.
 > Saat server dimulai ulang, token perlu login ulang.
+
+## 📊 Laporan Keuangan ke Google Sheets
+
+Setiap pembayaran & pencatatan pengeluaran **otomatis** dikirim ke Google Spreadsheet
+anda (gratis, tanpa login Google di dalam aplikasi):
+
+1. Buat Google Spreadsheet baru di <https://sheets.google.com>
+2. **Extensions → Apps Script** → hapus isi `Code.gs` → tempel [`scripts/gs-laporan.gs`](scripts/gs-laporan.gs)
+3. Ganti `KUNCI_RAHASIA` dengan kunci buatan Anda sendiri
+4. **Deploy → New deployment → Web app** → *Execute as: Me*, *Who has access: Anyone* → salin URL `/exec`
+5. **Pengaturan → Google Sheets** → tempel URL + kunci → **Simpan** → **Uji Koneksi**
+
+Aplikasi membuat 3 tab otomatis: **Transaksi** (1 baris per transaksi),
+**Penjualan** (1 baris per item → produk terlaris), **Pengeluaran**.
+Tanpa internet, data masuk antrean lokal dan dikirim otomatis saat sinyal kembali.
+
+> Panduan lengkap + cara membuat laporan laba rugi: [`docs/GOOGLE-SHEETS.md`](docs/GOOGLE-SHEETS.md)
 
 ## 📱 Aplikasi Android (.apk)
 
